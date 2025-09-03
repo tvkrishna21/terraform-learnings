@@ -1,0 +1,1 @@
+Subnet has been created successfully as my-subnet1, ID: subnet-0c55aeac7be6724e8

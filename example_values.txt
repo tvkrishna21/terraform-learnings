@@ -1,0 +1,7 @@
+Documentation for terraform aws related https://registry.terraform.io/providers/hashicorp/aws/latest/docs
+
+provider: aws
+
+resource
+for ec2
+resource: aws_instance

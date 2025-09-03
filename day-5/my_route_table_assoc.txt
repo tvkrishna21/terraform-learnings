@@ -1,0 +1,1 @@
+Route table association has been created successfully as my-rt-assoc, ID: rtbassoc-06a59b400f44ec824

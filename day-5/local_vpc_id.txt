@@ -1,0 +1,1 @@
+VPC has been created successfully as my-vpc, ID: vpc-0fc660f3185bce477

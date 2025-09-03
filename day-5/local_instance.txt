@@ -1,0 +1,1 @@
+VM has been created and copied app.py file from local to vm and then installed python3, flask and started the service, ID: i-0f9d7d7fa0cc6c19f

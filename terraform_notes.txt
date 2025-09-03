@@ -1,0 +1,178 @@
+Terraform
+
+Read about terraform in the following doc
+
+Install terraform  --> https://developer.hashicorp.com/terraform/install
+
+For ubuntu instance run below commands to install Terraform
+
+wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+sudo apt update && sudo apt install terraform
+
+ubuntu@ip-172-31-1-216:~/terraform$ terraform -version
+Terraform v1.12.2
+on linux_amd64
+
+Terraform is also known as API as code because Terraform uses API's to talk with cloud providers to implement, so we can use the same templates for aws, gcp, azure ....
+
+Install and configure awscli "sudo snap install aws-cli"
+
+Terraform aws related values can be found in https://registry.terraform.io/providers/hashicorp/aws/latest/docs
+
+Create a main.tf file for creating a ec2 instance in aws
+ubuntu@ip-172-31-14-7:~/terraform/ec2_instance_create$ cat main.tf 
+provider "aws" {
+	region = "ap-south-1"
+}
+
+resource "aws_instance" "terraform-vm" {
+	ami = "ami-0f918f7e67a3323f0"
+	instance_type = "t3.micro"
+}
+
+Now run terraform init --> this will analyse the main.tf file and Initialise the provider plugins like aws 
+Now run terraform plan --> this will create detailed plan of what are the changes done to achieve the declared resources
+Now run terraform apply --> this will display play again and also checks with resource value is valida or not in our case it checks ami id exists or not and t3.micro is a valid option for ec2 creation or not, if anything is wrong it will fail
+terraform apply
+.
+.
+aws_instance.terraform-vm: Creating...
+aws_instance.terraform-vm: Still creating... [00m10s elapsed]
+aws_instance.terraform-vm: Creation complete after 12s [id=i-09b0ae4c24a2f0b6c]
+
+Apply complete! Resources: 1 added, 0 changed, 0 destroyed.
+
+Terraform has provisioned the instance in aws, also it will create a terraform.tfstate this is a state file which records the changes
+
+terraform destroy --> will remove the resources created.
+
+If we use any name other terraform.tfvars, then while running the terraform apply we should pass the file as
+terraform apply -f my-custom-file.tfvars
+
+
+*************************************************************************************
+Terraform Workspaces
+
+ex: If we have a terraform for the Infrastructure for Dev env with Instance type as t3.micro and we want replicate the same infra for UAT and Prod with same configuration but instance type should be t3.small for uat and t3.c7i-flex.large for Prod then,
+If we try to create dev env with ami and t3.micro it will be successful for Dev, now we try to change the instance to t3.small and do the terraform apply then terraform will only update the instance type from t3.micro to t3.small because while creating an infra for Dev TF will have a statefile with all the details of Dev infra and if try to add t3.small and apply TF will see for statefile and then changes only instance type
+To overcome this situation TF has introduced a functionality called TF Workspaces, here TF will have statefiles for each and every Workspace like 1 statefile for Dev, another for UAT and another for Prod, this way we can overcome the issue.
+
+Terraform workspace commands
+
+"terraform workspace new <workspace-name>" ---> command to create a workspace
+
+"terraform workspace new dev"  --> Dev workspace
+"terraform workspace new stage" --> UAT workspace
+"terraform workspace new prod" --> Prod Workspace
+
+"terraform workspace select <workspace-name>" --> to select the workspace
+"terraform workspace select dev" --> Selecting the Dev workspace
+"terraform workspace show" --> will display the present Workspace
+
+*************************************************************************************
+Terraform Import
+
+Import a running vm to terraform
+
+Create a main.tf file to import a running vm to terraform as
+-----------------------------------
+provider "aws" {
+    region = "ap-south-1"
+}
+
+import {
+  id = "i-006fe6a468bfd0a81"
+
+  to = aws_instance.example
+}
+-----------------------------------
+
+terraform init
+terraform plan -generate-config-out=generated_resources.tf
+
+ubuntu@ip-172-31-12-43:~/tf-import$ terraform plan -generate-config-out=generated_resources.tf
+aws_instance.example: Preparing import... [id=i-006fe6a468bfd0a81]
+aws_instance.example: Refreshing state... [id=i-006fe6a468bfd0a81]
+
+
+Modify the main.tf file as stored in day-8 (tf import) folder
+
+If we do terraform plan it say 1 resource will be created but the resource ec2 instance is already there and running it is saying because currently tf doesn't have any statefile
+
+We should import the statefile from the running resource (ec2 instance), terraform import <resource-type>.<resource-name> <resource-id>
+terraform import aws_instance.example i-006fe6a468bfd0a81 ---> This is generate a tf statefile and now when we try to do tf plan it will not say resource will be created
+----
+ubuntu@ip-172-31-12-43:~/tf-import$ terraform plan
+aws_instance.example: Refreshing state... [id=i-006fe6a468bfd0a81]
+
+No changes. Your infrastructure matches the configuration.
+
+Terraform has compared your real infrastructure against your configuration and found no differences, so no changes are needed.
+ubuntu@ip-172-31-12-43:~/tf-import$ 
+----
+
+To monitor any manual changes done by a user other than terraform to terraform generated resources, we can do it in following ways
+
+1. Terraform migration ( using import and then running terraform import command which will create a state file).
+
+- This will import the EC2 instance all details which was created manually.
+
+- Importing EC2 instance to create a state file.
+
+
+# 2. Terraform drift detection ( if some one manually changed any settings for any resource, then detecting that change is called drift detection).
+
+# There are 2 ways to detect it.
+
+Scenario 1: Use terraform refresh using a cron job. ( terraform refresh, refershes the recents changes which was done manually to the statefile and keeps it updated.
+
+Scenario 2: 
+
+- A) Use audit/activity logs to see who made changes, if its changed by user and resources is managed by TF, then send an alert using lambda/azure functions and notify.
+
+- B) Apply strict IAM rules so that no one can login to console.
+
+
+Scenario 1 but using a tf commands for practice purpose
+
+Made a change manually to running vm managed by tf, changed security group from "sg-0c4cd7a9e2b127e22" to "sg-06c4533ef591012ad"
+
+To view any manual changes goto the dir where tf state is stored for this instance and do "terraform plan -refresh-only" --> This show a detailed view of changes made to managed resource
+
+ubuntu@ip-172-31-12-43:~/tf-import$ terraform plan -refresh-only
+aws_instance.example: Refreshing state... [id=i-006fe6a468bfd0a81]
+
+Note: Objects have changed outside of Terraform
+
+Terraform detected the following changes made outside of Terraform since the last "terraform apply" which may have affected this
+plan:
+
+  # aws_instance.example has changed
+  ~ resource "aws_instance" "example" {
+        id                                   = "i-006fe6a468bfd0a81"
+      ~ security_groups                      = [
+          - "launch-wizard-4",
+          + "default",
+        ]
+        tags                                 = {
+            "Name" = "import-instance"
+        }
+      ~ vpc_security_group_ids               = [
+          - "sg-0c4cd7a9e2b127e22",
+          + "sg-06c4533ef591012ad",
+        ]
+        # (36 unchanged attributes hidden)
+
+        # (9 unchanged blocks hidden)
+    }
+
+
+This is a refresh-only plan, so Terraform will not take any actions to undo these. If you were expecting these changes then you can
+apply this plan to record the updated values in the Terraform state without changing any remote objects.
+
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+Note: You didn't use the -out option to save this plan, so Terraform can't guarantee to take exactly these actions if you run
+"terraform apply" now.
+ubuntu@ip-172-31-12-43:~/tf-import$ 
