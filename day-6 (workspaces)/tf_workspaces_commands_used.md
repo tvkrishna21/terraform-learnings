@@ -1,22 +1,32 @@
+# Terraform workspaces 
+
+```
 terraform workspace show
 > default
+```
+```
 terraform workspace new dev
 terraform workspace new stage
 terraform workspace new prod
-
+```
+```
 terraform workspace list
 >   default
   dev
 * prod
   stage
-
+```
+```
 terraform workspace select dev
-
+```
+```
 terraform workspace show
 > dev
-
+```
+```
 terraform apply
-
+```
+```
 Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following
 symbols:
   + create
@@ -115,10 +125,11 @@ Outputs:
 
 Public-DNS = "ec2-13-203-193-239.ap-south-1.compute.amazonaws.com"
 instance-id = "i-07bcb59f6b62ff9a9"
+```
 
+#### Terraform Workspaces will create a statefile for each of the workspace in terraform.tfstate.d dir
 
-Workspaces will create a statefile for each of the workspace in terraform.tfstate.d dir
-
+```
 ubuntu@ip-172-31-12-43:~/tf$ cd terraform.tfstate.d/
 ubuntu@ip-172-31-12-43:~/tf/terraform.tfstate.d$ ls -l
 total 12
@@ -133,15 +144,18 @@ ubuntu@ip-172-31-12-43:~/tf/terraform.tfstate.d/dev$ cd ../prod/
 ubuntu@ip-172-31-12-43:~/tf/terraform.tfstate.d/prod$ ls -l
 total 0 ----------------------------------------------------------> No statefile because we didn't perform any terraform process in stage and prod workspaces
 ubuntu@ip-172-31-12-43:~/tf/terraform.tfstate.d/prod$ 
+```
 
-Now switch to stage workspace and run terrform apply --> we use this same command "terraform apply" which will select the instance type based on workspace we run the command
+#### Now switch to stage workspace and run terrform apply --> we use this same command "terraform apply" which will select the instance type based on workspace we run the command
 
+```
 ubuntu@ip-172-31-12-43:~/tf$ terraform workspace select stage
 Switched to workspace "stage".
 ubuntu@ip-172-31-12-43:~/tf$ terraform workspace show
 stage
 ubuntu@ip-172-31-12-43:~/tf$ terraform apply
-
+```
+```
 Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following
 symbols:
   + create
@@ -241,11 +255,15 @@ Outputs:
 Public-DNS = "ec2-15-206-174-114.ap-south-1.compute.amazonaws.com"
 instance-id = "i-0464111cb3abd5f24"
 ubuntu@ip-172-31-12-43:~/tf$ 
+```
 
-Now if we see will have a statefile for stage as well
+#### Now if we see will have a statefile for stage as well
+
+```
 ubuntu@ip-172-31-12-43:~/tf$ cd terraform.tfstate.d/stage/
 ubuntu@ip-172-31-12-43:~/tf/terraform.tfstate.d/stage$ ls -l
 total 8
 -rw-rw-r-- 1 ubuntu ubuntu 5282 Aug 25 09:32 terraform.tfstate
+```
 
-Do this for prod workspaces as well
+#### Do this for prod workspaces as well
